@@ -10,6 +10,8 @@ import pandas as pd
 from dash import dash_table
 import numpy as np
 from datetime import date, datetime
+import statsmodels.api as sm
+from scipy.stats import ttest_ind
 matplotlib.use('Agg')
 
 image_url = "https://mausam.imd.gov.in/responsive/img/logo/imd_logo_a.png"
@@ -76,7 +78,9 @@ app.layout = html.Div(
                 dcc.Graph(id='graph'),
                 html.Div(id='top-values'),
                 html.Div(id='statistics'),
-                html.Div(id='equation')
+                html.Div(id='equation'),
+                html.Div(id='trend-result')
+
                 # Placeholder for the rainfall content
             ])
     ])
@@ -232,6 +236,7 @@ def generate_plot(n_clicks, date):
     Output('top-values', 'children'),
     Output('statistics', 'children'),
     Output('equation', 'children'),
+    Output('trend-result', 'children'),
     Input('station-dropdown', 'value'),
     Input('option-dropdown', 'value'),
     Input('file-dropdown', 'value'),
@@ -269,6 +274,8 @@ def update_graph(station_name, option, file_path, start_date, end_date, n_clicks
             valid_dates = filtered_dates[valid_mask]
             valid_values = filtered_values[valid_mask]
 
+
+
             # Calculate trend line
             trend_line = np.polyfit(range(len(valid_values)), valid_values, 1)
             trend_line_values = np.polyval(trend_line, range(len(valid_values)))
@@ -276,6 +283,16 @@ def update_graph(station_name, option, file_path, start_date, end_date, n_clicks
             slope = trend_line[0]
             intercept = trend_line[1]
             equation = f"y = {slope:.2f}x + {intercept:.2f}"
+
+            control_group = filtered_values[:len(valid_values)]
+            experimental_group = valid_values
+            t_statistic, p_value = ttest_ind(control_group, experimental_group)
+            significance_level = 0.05
+
+            if p_value < significance_level:
+                is_significant = "Yes"
+            else:
+                is_significant = "No"
 
             time_series_data = pd.DataFrame({'Date': filtered_dates, 'Value': filtered_values})
             sorted_data = time_series_data.sort_values(by='Value', ascending=False)
@@ -295,16 +312,21 @@ def update_graph(station_name, option, file_path, start_date, end_date, n_clicks
                 html.Div("Standard Deviation: {:.2f}".format(std_dev), style={"font-size": "20px","margin-bottom": "5px"}),
                 html.Div("Mean: {:.2f}".format(mean_val), style={"font-size": "20px","margin-bottom": "5px"}),
                 html.Div("Coefficient of Variation: {:.2f}".format(cv), style={"font-size": "20px","margin-bottom": "5px"}),
-             ]), html.Div([
+               ]),html.Div([
                 html.H6("Equation of Trend Line:", style={"font-size": "20px","margin-bottom": "5px"}),
                html.Div(equation, style={"font-size": "20px","margin-bottom": "5px"})
                ]),html.Div([
+               html.H6("T-Test Result", style={"font-size": "20px", "margin-bottom": "5px"}),
+               html.Div("T-Statistic: {:.2f}".format(t_statistic), style={"font-size": "20px", "margin-bottom": "5px"}),
+               html.Div("P-Value: {:.2f}".format(p_value), style={"font-size": "20px", "margin-bottom": "5px"}),
+               html.Div("Is the trend significant? {}".format(is_significant), style={"font-size": "20px", "margin-bottom": "5px"})
+                ]),html.Div([
                 html.H6("Top 5 maximum values:",style={"font-size":"20px","margin-bottom": "5px"}),
                 dash_table.DataTable(
                     data=top_5_data.to_dict('records'),
                     columns=[{'name': col, 'id': col} for col in top_5_data.columns]
                 )
-            ])
+               ])
         elif option == 'repeat':
             start_date_range = datetime.strptime(start_date, "%Y-%m-%d")
             start_year_range = start_date_range.year
@@ -353,6 +375,16 @@ def update_graph(station_name, option, file_path, start_date, end_date, n_clicks
             intercept = trend_line[1]
             equation = f"y = {slope:.2f}x + {intercept:.2f}"
 
+            control_group = filtered_values[:len(valid_values)]
+            experimental_group = valid_values
+            t_statistic, p_value = ttest_ind(control_group, experimental_group)
+            significance_level = 0.05
+
+            if p_value < significance_level:
+                is_significant = "Yes"
+            else:
+                is_significant = "No"
+
             time_series_data = pd.DataFrame({'Date': filtered_dates_df['Date'], 'Value': filtered_values_df['Value']})
             sorted_data = time_series_data.sort_values(by='Value', ascending=False)
             top_5_data = sorted_data.head(5)
@@ -372,17 +404,22 @@ def update_graph(station_name, option, file_path, start_date, end_date, n_clicks
                 html.Div("Standard Deviation: {:.2f}".format(std_dev),style={"font-size": "20px", "margin-bottom": "5px"}),
                 html.Div("Mean: {:.2f}".format(mean_val), style={"font-size": "20px", "margin-bottom": "5px"}),
                 html.Div("Coefficient of Variation: {:.2f}".format(cv), style={"font-size": "20px", "margin-bottom": "5px"}),
-            ]), html.Div([
+                 ]), html.Div([
                 html.H6("Equation of Trend Line:", style={"font-size": "20px", "margin-bottom": "5px"}),
                 html.Div(equation, style={"font-size": "20px", "margin-bottom": "5px"})
-            ]), html.Div([
+                  ]),html.Div([
+                  html.H6("T-Test Result", style={"font-size": "20px", "margin-bottom": "5px"}),
+                html.Div("T-Statistic: {:.2f}".format(t_statistic), style={"font-size": "20px", "margin-bottom": "5px"}),
+                     html.Div("P-Value: {:.2f}".format(p_value), style={"font-size": "20px", "margin-bottom": "5px"}),
+                 html.Div("Is the trend significant? {}".format(is_significant), style={"font-size": "20px", "margin-bottom": "5px"})
+               ]), html.Div([
                 html.H6("Top 5 maximum values:", style={"font-size": "20px", "margin-bottom": "5px"}),
                 dash_table.DataTable(
                     data=top_5_data.to_dict('records'),
                     columns=[{'name': col, 'id': col} for col in top_5_data.columns]
                 )
             ])
-    return go.Figure(), html.Div(), html.Div(), html.Div()
+    return go.Figure(), html.Div(), html.Div(), html.Div(),html.Div()
 
 
 if __name__ == '__main__':
