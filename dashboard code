@@ -285,7 +285,11 @@ def update_graph(station_name, option, file_path, start_date, end_date, n_clicks
 
             control_group = filtered_values[:len(valid_values)]
             experimental_group = valid_values
-            t_statistic, p_value = ttest_ind(control_group, experimental_group)
+            # Exclude NaN values from control_group and experimental_group
+            control_group = control_group[~np.isnan(control_group)]
+            experimental_group = experimental_group[~np.isnan(experimental_group)]
+
+            t_statistic, p_value = ttest_ind(control_group, experimental_group, nan_policy='omit')
             significance_level = 0.05
 
             if p_value < significance_level:
