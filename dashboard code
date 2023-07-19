@@ -10,7 +10,6 @@ import pandas as pd
 from dash import dash_table
 import numpy as np
 from datetime import date, datetime
-import statsmodels.api as sm
 from scipy.stats import ttest_ind
 matplotlib.use('Agg')
 
